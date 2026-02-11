@@ -1,0 +1,31 @@
+name: "Infrastructure Deploy"
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write # Required for Workload Identity
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - id: "auth"
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/427684558345/locations/global/workloadIdentityPools/wiz-pool/providers/wiz-provider"
+          service_account: "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
+
+      - name: "Set up Terraform"
+        uses: hashicorp/setup-terraform@v3
+
+      - name: "Terraform Init"
+        run: terraform init
+
+      - name: "Terraform Apply"
+        run: terraform apply -auto-approve
