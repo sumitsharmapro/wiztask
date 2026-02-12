@@ -12,7 +12,6 @@ provider "google" {
 resource "google_compute_network" "vpc" {
   name                    = "wiz-vpc"
   auto_create_subnetworks = false
-  depends_on              = [google_project_service.apis]
 }
 
 resource "google_compute_subnetwork" "subnet" {
