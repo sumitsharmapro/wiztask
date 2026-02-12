@@ -1,7 +1,7 @@
 terraform {
   required_version = ">= 1.5.0"
-  # Use a GCS backend so your state is safe (Create the bucket manually once: clgcporg10-170-tfstate)
-  backend "gcs" {
+
+backend "gcs" {
     bucket = "clgcporg10-170-tfstate"
     prefix = "terraform/state"
   }
@@ -27,7 +27,7 @@ resource "google_compute_subnetwork" "subnet" {
   private_ip_google_access = true # Crucial for private GKE nodes
 }
 
-# 3. Artifact Registry - For your Docker images
+# 3. Artifact Registry - For Docker images
 resource "google_artifact_registry_repository" "repo" {
   location      = "us-central1"
   repository_id = "wiz-app-repo"
