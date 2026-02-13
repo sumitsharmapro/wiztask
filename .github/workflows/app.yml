@@ -2,10 +2,7 @@ name: "Application Build and Deploy"
 on:
   push:
     paths:
-      - 'app.js'
-      - 'Dockerfile'
-      - 'package.json'
-      - 'k8s/**'
+      - main
 
 permissions:
   id-token: write
