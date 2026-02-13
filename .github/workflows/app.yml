@@ -24,5 +24,6 @@ jobs:
           docker push us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest
       - name: "Deploy to GKE"
         run: |
+          gcloud components install gke-gcloud-auth-plugin
           gcloud container clusters get-credentials wiz-cluster --zone us-central1-a
-          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yml
