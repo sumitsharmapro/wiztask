@@ -27,3 +27,4 @@ jobs:
           gcloud components install gke-gcloud-auth-plugin
           gcloud container clusters get-credentials wiz-cluster --zone us-central1-a
           kubectl apply -f k8s/deployment.yml
+          kubectl rollout restart deployment/wiz-app
