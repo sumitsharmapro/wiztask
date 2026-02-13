@@ -19,10 +19,10 @@ const server = http.createServer(async (req, res) => {
     let dbStatus = "Checking...";
     try {
       const client = await MongoClient.connect(mongoUrl, { serverSelectionTimeoutMS: 2000 });
-      dbStatus = "✅ Connected";
+      dbStatus = "Connected";
       await client.close();
     } catch (err) {
-      dbStatus = "❌ Connection Failed";
+      dbStatus = "Connection Failed";
     }
 
     res.writeHead(200, { 'Content-Type': 'text/html' });
