@@ -2,10 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wiz-app
-  labels:
-    app: wiz-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: wiz-app
@@ -14,11 +12,8 @@ spec:
       labels:
         app: wiz-app
     spec:
-      # This uses the Service Account we define in main.tf
-      serviceAccountName: wiz-gke-nodes
       containers:
-      - name: wiz-app-container
-        # Update this to your specific project ID and repo
+      - name: wiz-app
         image: us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest
         ports:
         - containerPort: 8080
@@ -32,6 +27,6 @@ spec:
   selector:
     app: wiz-app
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
