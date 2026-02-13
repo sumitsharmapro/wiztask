@@ -40,3 +40,5 @@ jobs:
           gcloud container clusters get-credentials wiz-cluster --zone us-central1-a
           kubectl apply -f k8s/
           kubectl rollout restart deployment/wiz-app
+
+          # test
