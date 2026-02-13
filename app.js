@@ -1,3 +1,4 @@
+// Final Connection Test
 const http = require('http');
 const fs = require('fs');
 const { MongoClient } = require('mongodb'); // The "phone" to call the database
