@@ -1,72 +1,61 @@
-terraform {
-  required_version = ">= 1.5.0"
-}
+# 1. Outdated MongoDB VM
+resource "google_compute_instance" "mongodb_vm" {
+  name         = "mongodb-outdated-vm"
+  machine_type = "e2-medium"
+  zone         = "us-central1-a"
 
-provider "google" {
-  project = "clgcporg10-170"
-  region  = "us-central1"
-}
-
-
-# 2. Network - Isolated and Private
-resource "google_compute_network" "vpc" {
-  name                    = "wiz-vpc"
-  auto_create_subnetworks = false
-}
-
-resource "google_compute_subnetwork" "subnet" {
-  name                     = "wiz-subnet"
-  ip_cidr_range            = "10.0.1.0/24"
-  network                  = google_compute_network.vpc.id
-  private_ip_google_access = true # Crucial for private GKE nodes
-}
-
-# 3. Artifact Registry - For Docker images
-resource "google_artifact_registry_repository" "repo" {
-  location      = "us-central1"
-  repository_id = "wiz-app-repo"
-  format        = "DOCKER"
-}
-
-# 4. GKE Identity - Zero Trust (Least Privilege)
-resource "google_service_account" "gke_nodes" {
-  account_id   = "wiz-gke-nodes"
-  display_name = "GKE Nodes Service Account"
-}
-
-resource "google_project_iam_member" "gke_registry_reader" {
-  project = "clgcporg10-170"
-  role    = "roles/artifactregistry.reader"
-  member  = "serviceAccount:${google_service_account.gke_nodes.email}"
-}
-
-# 5. GKE Cluster - Fully Private for Security
-resource "google_container_cluster" "primary" {
-  name     = "wiz-cluster"
-  location = "us-central1-a"
-  network  = google_compute_network.vpc.id
-  subnetwork = google_compute_subnetwork.subnet.id
-  
-  remove_default_node_pool = true
-  initial_node_count       = 1
-  deletion_protection      = false
-
-  private_cluster_config {
-    enable_private_nodes    = true
-    enable_private_endpoint = false # Keep master public for easy kubectl access
-    master_ipv4_cidr_block  = "172.16.0.0/28"
+  # Requirement: Outdated Linux (Debian 10 is ~5 years old) [cite: 52]
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-10"
+    }
   }
+
+  network_interface {
+    network    = google_compute_network.main.id
+    subnetwork = google_compute_subnetwork.public.id # Using public subnet [cite: 38]
+    access_config {} # Gives it a Public IP for SSH requirement [cite: 53]
+  }
+
+  # Requirement: Overly permissive Service Account [cite: 54]
+  service_account {
+    email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
+    scopes = ["cloud-platform"] # Full access to all APIs
+  }
+
+  # Startup script to install outdated MongoDB 4.4 [cite: 54]
+  metadata_startup_script = <<-EOF
+    sudo apt-get update
+    sudo apt-get install -y gnupg wget
+    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
+    echo "deb http://repo.mongodb.org/apt/debian buster/mongodb-org/4.4 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+    sudo apt-get update
+    sudo apt-get install -y mongodb-org
+    sudo systemctl start mongod
+  EOF
 }
 
-resource "google_container_node_pool" "nodes" {
-  name       = "wiz-pool"
-  cluster    = google_container_cluster.primary.name
-  location   = "us-central1-a"
-  node_count = 1
+# 2. Publicly Readable Backup Bucket 
+resource "google_storage_bucket" "backup_bucket" {
+  name          = "wiz-db-backups-${random_id.id.hex}"
+  location      = "US"
+  force_destroy = true
+  public_access_prevention = "inherited"
+}
 
-  node_config {
-    service_account = google_service_account.gke_nodes.email
-    oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
-    machine_type    = "e2-medium"
+resource "google_storage_bucket_iam_member" "public_read" {
+  bucket = google_storage_bucket.backup_bucket.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers" # Requirement: Publicly readable [cite: 57]
+}
+
+# 3. Public SSH Firewall Rule [cite: 53]
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "allow-ssh-public"
+  network = google_compute_network.main.name
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
   }
+  source_ranges = ["0.0.0.0/0"] # Exposed to internet
 }
