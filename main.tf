@@ -4,7 +4,7 @@ resource "google_compute_instance" "mongodb_vm" {
   machine_type = "e2-medium"
   zone         = "us-central1-a"
 
-  # Requirement: Outdated Linux (Debian 10 is ~5 years old) [cite: 52]
+  # Outdated Linux
   boot_disk {
     initialize_params {
       image = "debian-cloud/debian-10"
@@ -13,17 +13,17 @@ resource "google_compute_instance" "mongodb_vm" {
 
   network_interface {
     network    = google_compute_network.main.id
-    subnetwork = google_compute_subnetwork.public.id # Using public subnet [cite: 38]
-    access_config {} # Gives it a Public IP for SSH requirement [cite: 53]
+    subnetwork = google_compute_subnetwork.public.id # Using public subnet
+    access_config {} # Gives it a Public IP for SSH requirement
   }
 
-  # Requirement: Overly permissive Service Account [cite: 54]
+  # Overly permissive Service Account
   service_account {
     email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
     scopes = ["cloud-platform"] # Full access to all APIs
   }
 
-  # Startup script to install outdated MongoDB 4.4 [cite: 54]
+  # Startup script to install outdated MongoDB 4.4
   metadata_startup_script = <<-EOF
     sudo apt-get update
     sudo apt-get install -y gnupg wget
@@ -46,10 +46,10 @@ resource "google_storage_bucket" "backup_bucket" {
 resource "google_storage_bucket_iam_member" "public_read" {
   bucket = google_storage_bucket.backup_bucket.name
   role   = "roles/storage.objectViewer"
-  member = "allUsers" # Requirement: Publicly readable [cite: 57]
+  member = "allUsers" # Publicly readable
 }
 
-# 3. Public SSH Firewall Rule [cite: 53]
+# 3. Public SSH Firewall Rule
 resource "google_compute_firewall" "allow_ssh" {
   name    = "allow-ssh-public"
   network = google_compute_network.main.name
