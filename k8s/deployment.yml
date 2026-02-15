@@ -8,7 +8,7 @@ subjects:
   namespace: default
 roleRef:
   kind: ClusterRole
-  [cite_start]name: cluster-admin # Cluster-wide admin role 
+  name: cluster-admin # Cluster-wide admin role 
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
@@ -29,10 +29,10 @@ spec:
       - name: wiz-app
         image: us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest
         securityContext:
-          [cite_start]privileged: true # Container has root-level access to the host 
+          privileged: true # Container has root-level access to the host 
         env:
         - name: MONGO_URL
-          [cite_start]value: "mongodb://10.0.1.2:27017/wizdb"
+          value: "mongodb://10.0.1.2:27017/wizdb"
 ---
 apiVersion: v1
 kind: Service
