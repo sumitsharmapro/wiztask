@@ -24,6 +24,17 @@ resource "google_compute_subnetwork" "private" {
   network       = google_compute_network.main.id
 }
 
+# Allowing internal traffic to the DB from the whole VPC
+resource "google_compute_firewall" "allow_mongodb_internal" {
+  name    = "allow-mongodb-internal"
+  network = google_compute_network.main.name
+  allow {
+    protocol = "tcp"
+    ports    = ["27017"]
+  }
+  source_ranges = ["10.0.0.0/8"] # Internal VPC range
+}
+
 resource "random_id" "id" {
   byte_length = 4
 }
