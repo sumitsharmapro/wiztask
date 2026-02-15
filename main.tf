@@ -30,7 +30,7 @@ resource "google_compute_instance" "mongodb_vm" {
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-10" # outdated OS
+      image = "debian-cloud/debian-11" # outdated OS
     }
   }
 
