@@ -1,29 +1,24 @@
-resource "google_compute_network" "main" {
-  name                    = "wiz-vpc"
-  auto_create_subnetworks = false
+# NETWORK
+data "google_compute_network" "main" {
+  name = "wiz-vpc"
 }
 
-resource "google_compute_subnetwork" "public" {
-  name          = "public-subnet"
-  ip_cidr_range = "10.0.1.0/24"
-  region        = "us-central1"
-  network       = google_compute_network.main.id
+data "google_compute_subnetwork" "public" {
+  name   = "public-subnet"
+  region = "us-central1"
 }
 
-resource "google_compute_subnetwork" "private" {
-  name          = "private-subnet"
-  ip_cidr_range = "10.0.2.0/24"
-  region        = "us-central1"
-  network       = google_compute_network.main.id
+data "google_compute_subnetwork" "private" {
+  name   = "private-subnet"
+  region = "us-central1"
 }
 
-# VULNERABILIES
-
+# HELPERS
 resource "random_id" "id" {
   byte_length = 4
 }
 
-# 1. Outdated MongoDB VM
+# outdated mongodb
 resource "google_compute_instance" "mongodb_vm" {
   name         = "mongodb-outdated-vm"
   machine_type = "e2-medium"
@@ -31,34 +26,40 @@ resource "google_compute_instance" "mongodb_vm" {
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-10" # 1+ year outdated Linux
+      image = "debian-cloud/debian-10" # old os
     }
   }
 
   network_interface {
-    network    = google_compute_network.main.id
-    subnetwork = google_compute_subnetwork.public.id
-    access_config {} # Public IP for SSH exposure
+    network    = data.google_compute_network.main.id
+    subnetwork = data.google_compute_subnetwork.public.id
+    access_config {} # public IP
   }
 
   service_account {
     email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
-    scopes = ["cloud-platform"] # Overly permissive
+    scopes = ["cloud-platform"] # God Mode permissions
   }
 
   metadata_startup_script = <<-EOF
     sudo apt-get update
     sudo apt-get install -y gnupg wget
-    # Installing 1+ year outdated MongoDB 4.4
+    
+    # old db version
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
     echo "deb http://repo.mongodb.org/apt/debian buster/mongodb-org/4.4 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
     sudo apt-get update
     sudo apt-get install -y mongodb-org
     sudo systemctl start mongod
+
+    # open bucket
+    echo "mongodump --out /tmp/backup && gsutil cp -r /tmp/backup gs://${google_storage_bucket.backup_bucket.name}/" > /usr/local/bin/backup.sh
+    chmod +x /usr/local/bin/backup.sh
+    (crontab -l 2>/dev/null; echo "0 0 * * * /usr/local/bin/backup.sh") | crontab -
   EOF
 }
 
-# 2. Publicly Readable Backup Bucket
+# open bucket
 resource "google_storage_bucket" "backup_bucket" {
   name          = "wiz-db-backups-${random_id.id.hex}"
   location      = "US"
@@ -69,25 +70,26 @@ resource "google_storage_bucket" "backup_bucket" {
 resource "google_storage_bucket_iam_member" "public_read" {
   bucket = google_storage_bucket.backup_bucket.name
   role   = "roles/storage.objectViewer"
-  member = "allUsers" # Publicly readable
+  member = "allUsers" # open bucket
 }
 
-# 3. Public SSH Firewall Rule
+# open ssh
 resource "google_compute_firewall" "allow_ssh" {
   name    = "allow-ssh-public"
-  network = google_compute_network.main.name
+  network = data.google_compute_network.main.name
   allow {
     protocol = "tcp"
     ports    = ["22"]
   }
-  source_ranges = ["0.0.0.0/0"] # Exposed to public internet
+  source_ranges = ["0.0.0.0/0"] # open fw
 }
+
 
 resource "google_container_cluster" "primary" {
   name     = "wiz-cluster"
   location = "us-central1-a"
-  network    = google_compute_network.main.name
-  subnetwork = google_compute_subnetwork.private.name # Private subnet
+  network    = data.google_compute_network.main.name
+  subnetwork = data.google_compute_subnetwork.private.name 
   
   initial_node_count = 1
   deletion_protection = false
