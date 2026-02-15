@@ -1,10 +1,3 @@
-resource "google_artifact_registry_repository" "wiz_app_repo" {
-  location      = "us-central1"
-  repository_id = "wiz-app-repo"
-  description   = "Docker repository for the Wiz Technical Exercise"
-  format        = "DOCKER"
-}
-
 resource "google_compute_network" "main" {
   name                    = "wiz-vpc"
   auto_create_subnetworks = false
@@ -24,23 +17,18 @@ resource "google_compute_subnetwork" "private" {
   network       = google_compute_network.main.id
 }
 
-# Allowing internal traffic to the DB from the whole VPC
-resource "google_compute_firewall" "allow_mongodb_internal" {
-  name    = "allow-mongodb-internal"
-  network = google_compute_network.main.name
-  allow {
-    protocol = "tcp"
-    ports    = ["27017"]
-  }
-  source_ranges = ["10.0.0.0/8"] # Internal VPC range
-}
-
 resource "random_id" "id" {
   byte_length = 4
 }
 
+resource "google_artifact_registry_repository" "wiz_app_repo" {
+  location      = "us-central1"
+  repository_id = "wiz-app-repo"
+  format        = "DOCKER"
+}
 
-# outdated mongoDB
+
+# Outdated OS and DB
 resource "google_compute_instance" "mongodb_vm" {
   name         = "mongodb-outdated-vm"
   machine_type = "e2-medium"
@@ -48,43 +36,42 @@ resource "google_compute_instance" "mongodb_vm" {
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-11" # outdated OS
+      image = "debian-cloud/debian-11" 
     }
   }
 
   network_interface {
     network    = google_compute_network.main.id
     subnetwork = google_compute_subnetwork.public.id
-    access_config {} # DB has public IP
+    access_config {} # Public IP/SSH 
   }
 
   service_account {
     email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
-    scopes = ["cloud-platform"] # giving server all perms
+    scopes = ["cloud-platform"] # Overly Permissive
   }
 
   metadata_startup_script = <<-EOF
     sudo apt-get update
     sudo apt-get install -y gnupg wget
-# Telling Mongo to listen on all internal interfaces
-sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf
-sudo systemctl restart mongod
-    
-    # outdated OS
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
     echo "deb http://repo.mongodb.org/apt/debian buster/mongodb-org/4.4 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
     sudo apt-get update
     sudo apt-get install -y mongodb-org
+    
+    sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf
+    
+    sudo systemctl enable mongod
     sudo systemctl start mongod
 
-    # DB backups going to open bucket
+    # Automated Backup to Public Bucket
     echo "mongodump --out /tmp/backup && gsutil cp -r /tmp/backup gs://${google_storage_bucket.backup_bucket.name}/" > /usr/local/bin/backup.sh
     chmod +x /usr/local/bin/backup.sh
     (crontab -l 2>/dev/null; echo "0 0 * * * /usr/local/bin/backup.sh") | crontab -
   EOF
 }
 
-# open bucket
+# Publicly Readable Storage
 resource "google_storage_bucket" "backup_bucket" {
   name          = "wiz-db-backups-${random_id.id.hex}"
   location      = "US"
@@ -95,10 +82,10 @@ resource "google_storage_bucket" "backup_bucket" {
 resource "google_storage_bucket_iam_member" "public_read" {
   bucket = google_storage_bucket.backup_bucket.name
   role   = "roles/storage.objectViewer"
-  member = "allUsers" # open bucket
+  member = "allUsers"
 }
 
-# open SSH
+# SSH Firewall Open to All
 resource "google_compute_firewall" "allow_ssh" {
   name    = "allow-ssh-public"
   network = google_compute_network.main.name
@@ -106,7 +93,17 @@ resource "google_compute_firewall" "allow_ssh" {
     protocol = "tcp"
     ports    = ["22"]
   }
-  source_ranges = ["0.0.0.0/0"] # open FW
+  source_ranges = ["0.0.0.0/0"]
+}
+
+resource "google_compute_firewall" "allow_mongodb_internal" {
+  name    = "allow-mongodb-internal"
+  network = google_compute_network.main.name
+  allow {
+    protocol = "tcp"
+    ports    = ["27017"]
+  }
+  source_ranges = ["10.0.1.0/24", "10.0.2.0/24"]
 }
 
 resource "google_container_cluster" "primary" {
