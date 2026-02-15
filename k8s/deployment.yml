@@ -1,3 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wiz-app-admin-binding
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  [cite_start]name: cluster-admin # Requirement: Cluster-wide admin role 
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,14 +28,12 @@ spec:
       containers:
       - name: wiz-app
         image: us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest
-        ports:
-        - containerPort: 8080
+        securityContext:
+          [cite_start]privileged: true # Requirement: Privileged container 
         env:
         - name: MONGO_URL
-          valueFrom:
-            secretKeyRef:
-              name: wiz-db-secrets
-              key: MONGO_URL---
+          [cite_start]value: "mongodb://[REPLACE_WITH_VM_INTERNAL_IP]:27017/wizdb" # [cite: 68]
+---
 apiVersion: v1
 kind: Service
 metadata:
