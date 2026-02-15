@@ -31,7 +31,6 @@ resource "google_compute_router_nat" "nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-
 resource "random_id" "id" {
   byte_length = 4
 }
@@ -42,8 +41,6 @@ resource "google_artifact_registry_repository" "wiz_app_repo" {
   format        = "DOCKER"
 }
 
-
-# Outdated OS and DB
 resource "google_compute_instance" "mongodb_vm" {
   name         = "mongodb-outdated-vm"
   machine_type = "e2-medium"
@@ -51,22 +48,23 @@ resource "google_compute_instance" "mongodb_vm" {
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-11" 
+      image = "debian-cloud/debian-11"
     }
   }
 
   network_interface {
     network    = google_compute_network.main.id
     subnetwork = google_compute_subnetwork.public.id
-    access_config {} # Public IP/SSH 
+    access_config {}
   }
 
   service_account {
     email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
-    scopes = ["cloud-platform"] # Overly Permissive
+    scopes = ["cloud-platform"]
   }
 
   metadata_startup_script = <<-EOF
+    #!/bin/bash
     sudo apt-get update
     sudo apt-get install -y gnupg wget
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
@@ -74,19 +72,19 @@ resource "google_compute_instance" "mongodb_vm" {
     sudo apt-get update
     sudo apt-get install -y mongodb-org
     
-    sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf
+    sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/g' /etc/mongod.conf
     
+    sudo systemctl restart mongod
     sudo systemctl enable mongod
-    sudo systemctl start mongod
 
-    # Automated Backup to Public Bucket
     echo "mongodump --out /tmp/backup && gsutil cp -r /tmp/backup gs://${google_storage_bucket.backup_bucket.name}/" > /usr/local/bin/backup.sh
     chmod +x /usr/local/bin/backup.sh
     (crontab -l 2>/dev/null; echo "0 0 * * * /usr/local/bin/backup.sh") | crontab -
   EOF
+
+  allow_stopping_for_update = true
 }
 
-# Publicly Readable Storage
 resource "google_storage_bucket" "backup_bucket" {
   name          = "wiz-db-backups-${random_id.id.hex}"
   location      = "US"
@@ -100,7 +98,6 @@ resource "google_storage_bucket_iam_member" "public_read" {
   member = "allUsers"
 }
 
-# SSH Firewall Open to All
 resource "google_compute_firewall" "allow_ssh" {
   name    = "allow-ssh-public"
   network = google_compute_network.main.name
