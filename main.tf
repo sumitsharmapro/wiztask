@@ -1,3 +1,10 @@
+resource "google_artifact_registry_repository" "wiz_app_repo" {
+  location      = "us-central1"
+  repository_id = "wiz-app-repo"
+  description   = "Docker repository for the Wiz Technical Exercise"
+  format        = "DOCKER"
+}
+
 resource "google_compute_network" "main" {
   name                    = "wiz-vpc"
   auto_create_subnetworks = false
