@@ -1,32 +1,55 @@
+resource "google_compute_network" "main" {
+  name                    = "wiz-vpc"
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "public" {
+  name          = "public-subnet"
+  ip_cidr_range = "10.0.1.0/24"
+  region        = "us-central1"
+  network       = google_compute_network.main.id
+}
+
+resource "google_compute_subnetwork" "private" {
+  name          = "private-subnet"
+  ip_cidr_range = "10.0.2.0/24"
+  region        = "us-central1"
+  network       = google_compute_network.main.id
+}
+
+# VULNERABILIES
+
+resource "random_id" "id" {
+  byte_length = 4
+}
+
 # 1. Outdated MongoDB VM
 resource "google_compute_instance" "mongodb_vm" {
   name         = "mongodb-outdated-vm"
   machine_type = "e2-medium"
   zone         = "us-central1-a"
 
-  # Outdated Linux
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-10"
+      image = "debian-cloud/debian-10" # 1+ year outdated Linux
     }
   }
 
   network_interface {
     network    = google_compute_network.main.id
-    subnetwork = google_compute_subnetwork.public.id # Using public subnet
-    access_config {} # Gives it a Public IP for SSH requirement
+    subnetwork = google_compute_subnetwork.public.id
+    access_config {} # Public IP for SSH exposure
   }
 
-  # Overly permissive Service Account
   service_account {
     email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
-    scopes = ["cloud-platform"] # Full access to all APIs
+    scopes = ["cloud-platform"] # Overly permissive
   }
 
-  # Startup script to install outdated MongoDB 4.4
   metadata_startup_script = <<-EOF
     sudo apt-get update
     sudo apt-get install -y gnupg wget
+    # Installing 1+ year outdated MongoDB 4.4
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
     echo "deb http://repo.mongodb.org/apt/debian buster/mongodb-org/4.4 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
     sudo apt-get update
@@ -35,7 +58,7 @@ resource "google_compute_instance" "mongodb_vm" {
   EOF
 }
 
-# 2. Publicly Readable Backup Bucket 
+# 2. Publicly Readable Backup Bucket
 resource "google_storage_bucket" "backup_bucket" {
   name          = "wiz-db-backups-${random_id.id.hex}"
   location      = "US"
@@ -57,5 +80,20 @@ resource "google_compute_firewall" "allow_ssh" {
     protocol = "tcp"
     ports    = ["22"]
   }
-  source_ranges = ["0.0.0.0/0"] # Exposed to internet
+  source_ranges = ["0.0.0.0/0"] # Exposed to public internet
+}
+
+resource "google_container_cluster" "primary" {
+  name     = "wiz-cluster"
+  location = "us-central1-a"
+  network    = google_compute_network.main.name
+  subnetwork = google_compute_subnetwork.private.name # Private subnet
+  
+  initial_node_count = 1
+  deletion_protection = false
+
+  node_config {
+    service_account = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
+    oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+  }
 }
