@@ -4,12 +4,12 @@ const { MongoClient } = require('mongodb');
 
 const port = 8080;
 
-// Access to MongoDB must be via an environment variable 
+// Requirement: Access to MongoDB must be via an environment variable 
 const mongoUrl = process.env.MONGO_URL;
 
 const server = http.createServer(async (req, res) => {
   if (req.url === '/wizexercise.txt') {
-    // Requirement: Validate the file actually exists [cite: 69]
+    // Identity Check
     fs.readFile('/wizexercise.txt', 'utf8', (err, data) => {
       if (err) { res.writeHead(404); res.end("File not found."); return; }
       res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -24,19 +24,23 @@ const server = http.createServer(async (req, res) => {
         throw new Error("MONGO_URL environment variable is missing");
       }
       
-      // Increased timeout for the external VM connection
-      const client = await MongoClient.connect(mongoUrl, { serverSelectionTimeoutMS: 5000 });
+      // FIXED: Added family: 4 (Forces IPv4) and directConnection: true (Bypasses ReplicaSet lookup)
+      const client = await MongoClient.connect(mongoUrl, { 
+        serverSelectionTimeoutMS: 5000,
+        family: 4, 
+        directConnection: true 
+      });
       
-      // Demonstrate the app and prove data is in the database 
+      // Pulling Mongo server info to prove connectivity
       const adminDb = client.db('admin').admin();
       const info = await adminDb.serverStatus();
       dbStatus = `<span style="color: green;">Connected (v${info.version})</span>`;
-      connectionDetail = `Target: ${mongoUrl.split('@')[1] || 'Internal VM'}`;
+      connectionDetail = `Target: ${mongoUrl.split('@')[1] || mongoUrl}`;
       
       await client.close();
     } catch (err) {
       dbStatus = `<span style="color: red;">Connection Failed</span>`;
-      connectionDetail = err.message;
+      connectionDetail = `Error: ${err.message}`;
     }
 
     res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -53,7 +57,7 @@ const server = http.createServer(async (req, res) => {
             <p><a href="/wizexercise.txt" style="color: #0077b6; text-decoration: none; font-weight: bold;">Step 1: Verify Identity File (/wizexercise.txt)</a></p>
           </div>
           <footer style="margin-top: 50px; font-size: 0.8em; color: #999;">
-            Note: This environment contains intentional configuration weaknesses for demo purposes. [cite: 9]
+            Note: This environment contains intentional configuration weaknesses for demo purposes.
           </footer>
         </body>
       </html>
