@@ -32,7 +32,7 @@ spec:
           privileged: true # Container has root-level access to the host 
         env:
         - name: MONGO_URL
-          value: "mongodb://10.0.1.3:27017/wizdb"
+          value: "mongodb://10.0.1.4:27017/wizdb"
 ---
 apiVersion: v1
 kind: Service
