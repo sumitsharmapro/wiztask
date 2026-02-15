@@ -115,7 +115,7 @@ resource "google_compute_firewall" "allow_mongodb_internal" {
     protocol = "tcp"
     ports    = ["27017"]
   }
-  source_ranges = ["10.0.1.0/24", "10.0.2.0/24"]
+  source_ranges = ["10.0.0.0/8"] 
 }
 
 resource "google_container_cluster" "primary" {
