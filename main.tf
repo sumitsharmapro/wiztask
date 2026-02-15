@@ -55,6 +55,9 @@ resource "google_compute_instance" "mongodb_vm" {
   metadata_startup_script = <<-EOF
     sudo apt-get update
     sudo apt-get install -y gnupg wget
+# Telling Mongo to listen on all internal interfaces
+sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf
+sudo systemctl restart mongod
     
     # outdated OS
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
