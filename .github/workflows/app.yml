@@ -1,7 +1,7 @@
 name: "Application Build and Deploy"
 on:
   push:
-    branches: [ main ]
+    branches: '**'
 permissions:
   id-token: write
   contents: read
