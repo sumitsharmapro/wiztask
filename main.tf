@@ -17,6 +17,21 @@ resource "google_compute_subnetwork" "private" {
   network       = google_compute_network.main.id
 }
 
+resource "google_compute_router" "router" {
+  name    = "wiz-router"
+  region  = "us-central1"
+  network = google_compute_network.main.id
+}
+
+resource "google_compute_router_nat" "nat" {
+  name                               = "wiz-nat"
+  router                             = google_compute_router.router.name
+  region                             = "us-central1"
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
+
+
 resource "random_id" "id" {
   byte_length = 4
 }
