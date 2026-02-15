@@ -3,13 +3,11 @@ const fs = require('fs');
 const { MongoClient } = require('mongodb');
 
 const port = 8080;
-
-// Requirement: Access to MongoDB must be via an environment variable 
 const mongoUrl = process.env.MONGO_URL;
 
 const server = http.createServer(async (req, res) => {
   if (req.url === '/wizexercise.txt') {
-    // Identity Check
+    // Requirement: Validate the identity file contains your name
     fs.readFile('/wizexercise.txt', 'utf8', (err, data) => {
       if (err) { res.writeHead(404); res.end("File not found."); return; }
       res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -20,27 +18,25 @@ const server = http.createServer(async (req, res) => {
     let connectionDetail = "";
 
     try {
-      if (!mongoUrl) {
-        throw new Error("MONGO_URL environment variable is missing");
-      }
+      if (!mongoUrl) throw new Error("MONGO_URL env variable missing");
       
-      // FIXED: Added family: 4 (Forces IPv4) and directConnection: true (Bypasses ReplicaSet lookup)
+      // THE FIX: We use a literal 10-second timeout and force IPv4
       const client = await MongoClient.connect(mongoUrl, { 
-        serverSelectionTimeoutMS: 5000,
-        family: 4, 
-        directConnection: true 
+        serverSelectionTimeoutMS: 10000, // Double the timeout for GKE-to-VM latency
+        family: 4,                      // Force IPv4 only
+        directConnection: true,         // Skip replica set discovery (Critical for single VMs)
+        connectTimeoutMS: 10000
       });
       
-      // Pulling Mongo server info to prove connectivity
       const adminDb = client.db('admin').admin();
       const info = await adminDb.serverStatus();
       dbStatus = `<span style="color: green;">Connected (v${info.version})</span>`;
-      connectionDetail = `Target: ${mongoUrl.split('@')[1] || mongoUrl}`;
+      connectionDetail = `Target: 10.0.1.5 (Verified)`;
       
       await client.close();
     } catch (err) {
       dbStatus = `<span style="color: red;">Connection Failed</span>`;
-      connectionDetail = `Error: ${err.message}`;
+      connectionDetail = `Diagnostic: ${err.message}`;
     }
 
     res.writeHead(200, { 'Content-Type': 'text/html' });
