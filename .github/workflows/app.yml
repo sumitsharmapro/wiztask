@@ -22,6 +22,17 @@ jobs:
         run: |
           docker build -t us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest .
           docker push us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest
+      - name: Build local image for scanning
+        run: docker build -t wiz-app:latest .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'wiz-app:latest'
+          format: 'table'
+          exit-code: '0' # Keeps the pipeline running so you can show the results
+          severity: 'CRITICAL,HIGH'
+          
       - name: "Deploy to GKE"
         run: |
           gcloud components install gke-gcloud-auth-plugin
