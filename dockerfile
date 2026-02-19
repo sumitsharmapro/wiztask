@@ -1,6 +1,6 @@
 FROM node:18-slim
 WORKDIR /app
-RUN echo "Sumit Sharma @ Wiz" > /wizexercise.txt
+RUN echo "Sumit Sharma" > /wizexercise.txt
 COPY package.json .
 RUN npm install
 COPY app.js .
