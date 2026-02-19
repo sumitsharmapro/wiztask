@@ -49,7 +49,7 @@ const server = http.createServer(async (req, res) => {
             <p style="font-size: 0.9em; color: #666;"><i>${connectionDetail}</i></p>
           </div>
           <div style="margin-top: 30px;">
-            <p><a href="/wizexercise.txt" style="color: #0077b6; text-decoration: none; font-weight: bold;">Verify Identity File (/wizexercise.txt)</a></p>
+            <p><a href="/wizexercise.txt" style="color: #0077b6; text-decoration: none; font-weight: bold;">Click Here to Verify Identity File</a></p>
           </div>
           <footer style="margin-top: 50px; font-size: 0.8em; color: #999;">
             Note: This environment contains intentional configuration weaknesses for the purposes of the demo.
