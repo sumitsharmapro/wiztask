@@ -113,6 +113,15 @@ resource "google_storage_bucket_iam_member" "public_read" {
   member = "allUsers"
 }
 
+# Preventative Cloud Control
+resource "google_storage_bucket" "secure_assets" {
+  name                     = "wiz-secure-assets-${random_id.id.hex}"
+  location                 = "US"
+  force_destroy            = true
+  
+  public_access_prevention = "enforced" 
+}
+
 resource "google_compute_firewall" "allow_ssh" {
   name    = "allow-ssh-public"
   network = google_compute_network.main.name
