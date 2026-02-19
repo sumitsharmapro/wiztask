@@ -23,7 +23,7 @@ jobs:
           framework: terraform
           soft_fail: true 
           output_format: cli
-jobs:
+          
   terraform:
     runs-on: ubuntu-latest
     steps:
