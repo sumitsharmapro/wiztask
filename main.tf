@@ -1,3 +1,18 @@
+resource "google_project_iam_audit_config" "project_audit" {
+  project = "clgcporg10-170" 
+  service = "allServices"
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+  audit_log_config {
+    log_type = "ADMIN_READ"
+  }
+}
+
+
 resource "google_compute_network" "main" {
   name                    = "wiz-vpc"
   auto_create_subnetworks = false
