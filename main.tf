@@ -1,5 +1,5 @@
 resource "google_project_iam_audit_config" "project_audit" {
-  project = "clgcporg10-170" 
+  project = "clgcporg59-p001" 
   service = "allServices"
   audit_log_config {
     log_type = "DATA_READ"
@@ -12,6 +12,11 @@ resource "google_project_iam_audit_config" "project_audit" {
   }
 }
 
+resource "google_service_account" "github_deployer" {
+  project      = "clgcporg59-p001"
+  account_id   = "github-deployer"
+  display_name = "GitHub Actions Service Account"
+}
 
 resource "google_compute_network" "main" {
   name                    = "wiz-vpc"
@@ -74,7 +79,7 @@ resource "google_compute_instance" "mongodb_vm" {
   }
 
   service_account {
-    email  = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
+    email  = google_service_account.github_deployer.email
     scopes = ["cloud-platform"]
   }
 
@@ -152,7 +157,41 @@ resource "google_container_cluster" "primary" {
   deletion_protection = false
 
   node_config {
-    service_account = "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
+    service_account = google_service_account.github_deployer.email
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
+}
+
+resource "google_iam_workload_identity_pool" "github_pool" {
+  project                   = "clgcporg59-p001"
+  workload_identity_pool_id = "github-actions-pool"
+  display_name              = "GitHub Actions Pool"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github_provider" {
+  project                            = "clgcporg59-p001"
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-provider"
+  display_name                       = "GitHub OIDC Provider"
+  
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.actor"      = "assertion.actor"
+    "attribute.repository" = "assertion.repository"
+  }
+  
+  attribute_condition = "assertion.repository == 'sumitsharmapro/wiztask'"
+  
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+
+resource "google_service_account_iam_binding" "workload_identity_binding" {
+  service_account_id = google_service_account.github_deployer.name
+  role               = "roles/iam.workloadIdentityUser"
+  
+  members = [
+    "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/sumitsharmapro/wiztask"
+  ]
 }
