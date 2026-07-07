@@ -3,12 +3,27 @@ on:
   push:
     branches:
       - main
+      - Wiztaskweaker
 
 permissions:
   id-token: write # Required for Workload Identity
   contents: read
-
 jobs:
+  scan:
+    name: Checkov IaC Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: true 
+          output_format: cli
+          
   terraform:
     runs-on: ubuntu-latest
     steps:
