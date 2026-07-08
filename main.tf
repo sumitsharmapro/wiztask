@@ -106,25 +106,20 @@ resource "google_compute_instance" "mongodb_vm" {
 }
 
 resource "google_storage_bucket" "backup_bucket" {
-  name          = "wiz-db-backups-${random_id.id.hex}"
-  location      = "US"
-  force_destroy = true
-  public_access_prevention = "inherited"
-}
-
-resource "google_storage_bucket_iam_member" "public_read" {
-  bucket = google_storage_bucket.backup_bucket.name
-  role   = "roles/storage.objectViewer"
-  member = "allUsers"
+  name                        = "wiz-db-backups-${random_id.id.hex}"
+  location                    = "US"
+  uniform_bucket_level_access = true
+  force_destroy               = true
+  public_access_prevention    = "inherited"
 }
 
 # Preventative Cloud Control
 resource "google_storage_bucket" "secure_assets" {
-  name                     = "wiz-secure-assets-${random_id.id.hex}"
-  location                 = "US"
-  force_destroy            = true
-  
-  public_access_prevention = "enforced" 
+  name                        = "wiz-secure-assets-${random_id.id.hex}"
+  location                    = "US"
+  uniform_bucket_level_access = true
+  force_destroy               = true
+  public_access_prevention    = "enforced" 
 }
 
 resource "google_compute_firewall" "allow_ssh" {
@@ -148,17 +143,17 @@ resource "google_compute_firewall" "allow_mongodb_internal" {
 }
 
 resource "google_container_cluster" "primary" {
-  name     = "wiz-cluster"
-  location = "us-central1-a"
+  name       = "wiz-cluster"
+  location   = "us-central1-a"
   network    = google_compute_network.main.name
   subnetwork = google_compute_subnetwork.private.name 
   
-  initial_node_count = 1
+  initial_node_count  = 1
   deletion_protection = false
 
   node_config {
     service_account = google_service_account.github_deployer.email
-    oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+    oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 }
 
@@ -175,23 +170,4 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
   display_name                       = "GitHub OIDC Provider"
   
   attribute_mapping = {
-    "google.subject"       = "assertion.sub"
-    "attribute.actor"      = "assertion.actor"
-    "attribute.repository" = "assertion.repository"
-  }
-  
-  attribute_condition = "assertion.repository == 'sumitsharmapro/wiztask'"
-  
-  oidc {
-    issuer_uri = "https://token.actions.githubusercontent.com"
-  }
-}
-
-resource "google_service_account_iam_binding" "workload_identity_binding" {
-  service_account_id = google_service_account.github_deployer.name
-  role               = "roles/iam.workloadIdentityUser"
-  
-  members = [
-    "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/sumitsharmapro/wiztask"
-  ]
-}
+    "google.subject"
