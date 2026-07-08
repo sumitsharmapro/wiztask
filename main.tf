@@ -189,3 +189,15 @@ resource "google_service_account_iam_binding" "workload_identity_binding" {
     "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/sumitsharmapro/wiztask"
   ]
 }
+
+resource "google_project_iam_member" "artifact_registry_writer" {
+  project = "clgcporg59-p001"
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.github_deployer.email}"
+}
+
+resource "google_project_iam_member" "gke_developer" {
+  project = "clgcporg59-p001"
+  role    = "roles/container.developer"
+  member  = "serviceAccount:${google_service_account.github_deployer.email}"
+}
