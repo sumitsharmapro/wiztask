@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: wiz-app
-        image: us-central1-docker.pkg.dev/clgcporg10-170/wiz-app-repo/wiz-app:latest
+        image: us-central1-docker.pkg.dev/clgcporg59-p001/wiz-app-repo/wiz-app:latest
         securityContext:
           privileged: true # Container has root-level access to the host 
         env:
