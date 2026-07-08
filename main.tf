@@ -1,5 +1,5 @@
 resource "google_project_iam_audit_config" "project_audit" {
-  project = "clgcporg59-p001" 
+  project = "clgcporg59-p001"
   service = "allServices"
   audit_log_config {
     log_type = "DATA_READ"
@@ -113,7 +113,6 @@ resource "google_storage_bucket" "backup_bucket" {
   public_access_prevention    = "inherited"
 }
 
-# Preventative Cloud Control
 resource "google_storage_bucket" "secure_assets" {
   name                        = "wiz-secure-assets-${random_id.id.hex}"
   location                    = "US"
@@ -169,8 +168,24 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
   workload_identity_pool_provider_id = "github-provider"
   display_name                       = "GitHub OIDC Provider"
   
-attribute_mapping = {
+  attribute_mapping = {
     "google.subject"       = "assertion.sub"
     "attribute.actor"      = "assertion.actor"
     "attribute.repository" = "assertion.repository"
   }
+  
+  attribute_condition = "assertion.repository == 'sumitsharmapro/wiztask'"
+  
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+
+resource "google_service_account_iam_binding" "workload_identity_binding" {
+  service_account_id = google_service_account.github_deployer.name
+  role               = "roles/iam.workloadIdentityUser"
+  
+  members = [
+    "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/sumitsharmapro/wiztask"
+  ]
+}
