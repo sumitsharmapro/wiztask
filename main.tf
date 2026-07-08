@@ -198,6 +198,6 @@ resource "google_project_iam_member" "artifact_registry_writer" {
 
 resource "google_project_iam_member" "gke_developer" {
   project = "clgcporg59-p001"
-  role    = "roles/container.developer"
+  role    = "roles/container.admin"
   member  = "serviceAccount:${google_service_account.github_deployer.email}"
 }
