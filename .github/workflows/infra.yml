@@ -8,6 +8,7 @@ on:
 permissions:
   id-token: write # Required for Workload Identity
   contents: read
+
 jobs:
   scan:
     name: Checkov IaC Scan
@@ -33,8 +34,8 @@ jobs:
       - id: "auth"
         uses: "google-github-actions/auth@v2"
         with:
-          workload_identity_provider: "projects/427684558345/locations/global/workloadIdentityPools/wiz-pool/providers/wiz-provider"
-          service_account: "github-deployer@clgcporg10-170.iam.gserviceaccount.com"
+          workload_identity_provider: "projects/682794255518/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          service_account: "github-actions-sa@clgcporg53-p001.iam.gserviceaccount.com"
 
       - name: "Set up Terraform"
         uses: hashicorp/setup-terraform@v3
