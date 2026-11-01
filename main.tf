@@ -42,7 +42,7 @@ resource "google_compute_instance" "mongodb_vm" {
 
   boot_disk {
     initialize_params {
-      image = "debian-11"
+      image = "debian-cloud/debian-12"
     }
   }
 
