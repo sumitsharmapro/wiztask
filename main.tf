@@ -1,5 +1,5 @@
 resource "google_project_iam_audit_config" "project_audit" {
-  project = "clgcporg59-p001"
+  project = "clgcporg53-p001"
   service = "allServices"
   audit_log_config {
     log_type = "DATA_READ"
@@ -13,7 +13,7 @@ resource "google_project_iam_audit_config" "project_audit" {
 }
 
 resource "google_service_account" "github_deployer" {
-  project      = "clgcporg59-p001"
+  project      = "clgcporg53-p001"
   account_id   = "github-deployer"
   display_name = "GitHub Actions Service Account"
 }
@@ -56,6 +56,7 @@ resource "random_id" "id" {
 }
 
 resource "google_artifact_registry_repository" "wiz_app_repo" {
+  project       = "clgcporg53-p001"
   location      = "us-central1"
   repository_id = "wiz-app-repo"
   format        = "DOCKER"
@@ -142,9 +143,9 @@ resource "google_compute_firewall" "allow_mongodb_internal" {
 }
 
 resource "google_container_cluster" "primary" {
-  name       = "wiz-cluster"
-  location   = "us-central1-a"
-  network    = google_compute_network.main.name
+  name     = "wiz-cluster"
+  location = "us-central1-a"
+  network  = google_compute_network.main.name
   subnetwork = google_compute_subnetwork.private.name 
   
   initial_node_count  = 1
@@ -157,13 +158,13 @@ resource "google_container_cluster" "primary" {
 }
 
 resource "google_iam_workload_identity_pool" "github_pool" {
-  project                   = "clgcporg59-p001"
+  project                   = "clgcporg53-p001"
   workload_identity_pool_id = "github-actions-pool"
   display_name              = "GitHub Actions Pool"
 }
 
 resource "google_iam_workload_identity_pool_provider" "github_provider" {
-  project                            = "clgcporg59-p001"
+  project                            = "clgcporg53-p001"
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-provider"
   display_name                       = "GitHub OIDC Provider"
@@ -191,13 +192,13 @@ resource "google_service_account_iam_binding" "workload_identity_binding" {
 }
 
 resource "google_project_iam_member" "artifact_registry_writer" {
-  project = "clgcporg59-p001"
+  project = "clgcporg53-p001"
   role    = "roles/artifactregistry.writer"
   member  = "serviceAccount:${google_service_account.github_deployer.email}"
 }
 
 resource "google_project_iam_member" "gke_developer" {
-  project = "clgcporg59-p001"
+  project = "clgcporg53-p001"
   role    = "roles/container.admin"
   member  = "serviceAccount:${google_service_account.github_deployer.email}"
 }
