@@ -7,7 +7,7 @@ on:
 
 permissions:
   id-token: write # Required for Workload Identity
-  contents: read
+  contents: read # read me
 
 jobs:
   scan:
