@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - Wiztaskweaker
+      - sumitwiz
 
 permissions:
   id-token: write # Required for Workload Identity
